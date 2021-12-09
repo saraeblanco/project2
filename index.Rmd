@@ -49,32 +49,158 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 ## Sara Blanco, seb4296
 
 ### Introduction 
-
 Paragraph or two introducing your datasets and variables, why they are interesting to you, etc. See instructions for more information
+
+Introduce your dataset and each of your variables (or just your main variables if you have lots) in a paragraph. Where did you find the data? What are each of the variables measuring? How many observations are there? How many of observations are there per group for your categorical/binary variable(s)?
+
+https://www.rdocumentation.org/packages/fivethirtyeight/versions/0.6.2/topics/candy_rankings
 
 ```{R}
 library(tidyverse)
-# read your datasets in here, e.g., with read_csv()
-
-# if your dataset needs tidying, do so here
-
-# any other code here
+library(fivethirtyeight)
+candy_rankings
 ```
 
 ### Cluster Analysis
 
 ```{R}
 library(cluster)
-# clustering code here
+
+#Process data 
+clust_dat<-candy_rankings %>% dplyr::select(sugarpercent, pricepercent, winpercent)
+
+#PAM
+pam1 <- clust_dat %>% pam(k=3) 
+pam1
+
+#visualize
+pamclust<-clust_dat %>% mutate(cluster=as.factor(pam1$clustering))
+pamclust %>% ggplot(aes(sugarpercent, winpercent, color=cluster)) + geom_point()
+
+#summarize clusters
+pamclust %>% group_by(cluster) %>% summarize_if(is.numeric,mean,na.rm=T)
+
+#final medoids
+candy_rankings%>%slice(pam1$id.med)
+
+#average silhouette width
+pam1$silinfo$avg.width
+plot(pam1,which=2)
+
+#picking number of clusters
+pam_dat<-candy_rankings%>%select(sugarpercent, pricepercent, winpercent)
+sil_width<-vector()
+for(i in 2:10){  
+  pam_fit <- pam(pam_dat, k = i)  
+  sil_width[i] <- pam_fit$silinfo$avg.width  
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+```
+
+
+```{R}
+#Redo after finding cluster number that gives best silhouette width *note, scaling was completed, but it altered strength of structure 
+
+#PAM
+pam2 <- clust_dat %>% pam(k=2) 
+pam2
+
+#visualize
+pamclust2<-clust_dat %>% mutate(cluster=as.factor(pam2$clustering))
+pamclust2 %>% ggplot(aes(sugarpercent, winpercent, color=cluster)) + geom_point()
+
+#summarize clusters
+pamclust2 %>% group_by(cluster) %>% summarize_if(is.numeric,mean,na.rm=T)
+
+#final medoids
+candy_rankings%>%slice(pam2$id.med)
+
+#average silhouette width/goodness of fit
+pam2$silinfo$avg.width
+plot(pam2,which=2)
+
+
+#ggpairs
+library(GGally); ggpairs(pamclust2, columns=1:4, aes(color=cluster))
+
+```
+
+```{r}
+#categorical variable: gower
+dat1<-candy_rankings%>%mutate_if(is.logical,as.factor)%>%column_to_rownames("competitorname") %>%
+  select(-fruity, -caramel, - peanutyalmondy, -nougat, -crispedricewafer, -hard, -bar, -pluribus)
+
+gower1<-daisy(dat1,metric="gower")
+
+
+#number of clusters
+sil_width<-vector()
+for(i in 2:10){  
+  pam_fit <- pam(gower1, diss = TRUE, k = i)  
+  sil_width[i] <- pam_fit$silinfo$avg.width  
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+
+
+#PAM
+pam3 <- pam(gower1, k = 2, diss = T) 
+pam3
+
+#Summary Statistics
+dat1%>%mutate(cluster=pam3$clustering)%>%group_by(cluster)%>%
+  rename_all(function(x)str_replace(x,"_",""))%>%
+  summarize_if(is.numeric,.funs = list("mean"=mean,"median"=median,"sd"=sd),na.rm=T)%>%
+  pivot_longer(contains("_"))%>%
+  separate(name,sep="_",into=c("variable","stat"))%>%
+  pivot_wider(names_from = "variable",values_from="value")%>%arrange(stat)
+
+#most representative of their cluster
+candy_rankings %>% slice(pam3$id.med)
+
+#interpreting fit/average silhouette width/goodness of fit
+pam3$silinfo$avg.width
+plot(pam2,which=2)
+
+#visualizing
+library(GGally); ggpairs(dat1, columns=1:4, aes(color=as.factor(pam3$clustering)))
+
 ```
 
 Discussion of clustering here
+
+Include a paragraph or two describing results found, interpreting the clusters in terms of the original variables and observations, discussing goodness of fit of the cluster solution, etc.
     
     
 ### Dimensionality Reduction with PCA
 
 ```{R}
-# PCA code here
+candy <- candy_rankings %>% select_if(is.numeric) %>% scale
+rownames(candy) <- candy_rankings$competitorname
+candy_pca <- princomp(candy)
+names(candy_pca)
+candy_pca
+
+
+#how many PCs to keep?
+eigval <-  candy_pca$sdev^2
+varprop=round(eigval/sum(eigval), 2) 
+
+ggplot() + geom_bar(aes(y=varprop, x=1:3), stat="identity") + xlab("") + geom_path(aes(y=varprop, x=1:3)) + 
+  geom_text(aes(x=1:3, y=varprop, label=round(varprop, 2)), vjust=1, col="white", size=5) + 
+  scale_y_continuous(breaks=seq(0, .6, .2), labels = scales::percent) + 
+  scale_x_continuous(breaks=1:10)
+
+summary(candy_pca, loadings=T)
+
+
+candydf<-data.frame(Name= candy_rankings$competitorname, PC1=candy_pca$scores[, 1],PC2=candy_pca$scores[, 2])
+
+ggplot(candydf, aes(PC1, PC2)) + geom_point()
+
+
+library(factoextra)
+fviz_pca_biplot(candy_pca, col.var="deeppink3") +
+   xlim(-4, 4) + ylim (-3, 3)
 ```
 
 Discussions of PCA here. 
@@ -82,11 +208,45 @@ Discussions of PCA here.
 ###  Linear Classifier
 
 ```{R}
-# linear classifier code here
+y_hat <- sample(c("TRUE","FALSE"), size=length(candy_rankings$chocolate), replace=T)
+candy_rankings %>% select(competitorname, chocolate,sugarpercent, pricepercent, winpercent) %>% mutate(prediction=y_hat)
+
+candy_rankings$chocolateIn <- as.integer(candy_rankings$chocolate)
+fit <- glm(chocolateIn ~ sugarpercent + pricepercent + winpercent, data=candy_rankings, family="binomial")
+score <- predict(fit, type="response")
+#predictions for all observations
+score %>% round(3) 
+class_diag(score,truth=candy_rankings$chocolateIn,positive=1)
+table(truth=factor(candy_rankings$chocolateIn==1, levels=c("TRUE", "FALSE")), predictions=factor(score>.5, levels=c("TRUE", "FALSE")))
+
+
+candy_rankings %>% ggplot(aes(sugarpercent, chocolateIn)) + geom_point(aes(color=score > .5)) + geom_smooth(method="glm", se=F,method.args = list(family = "binomial"))+ylim(0,1)+geom_hline(yintercept=.5, lty=2)
+
 ```
 
 ```{R}
 # cross-validation of linear classifier here
+#K-fold CV
+
+k=10
+data<-candy_rankings[sample(nrow(candy_rankings)),]
+folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train<-data[folds!=i,] 
+  test<-data[folds==i,]
+  truth<-test$chocolateIn ## Truth labels for fold i
+  ## Train model on training set (all but fold i)
+  fit <- glm(chocolateIn ~ sugarpercent + pricepercent + winpercent, data=train, family="binomial")
+  ## Test model on test set (fold i) 
+  probs<-predict(fit,newdata = test,type="response")
+  ## Get diagnostics for fold i
+  diags<-rbind(diags,class_diag(probs,truth, positive=1))
+}
+summarize_all(diags,mean) #average diagnostics across all k folds
+
 ```
 
 Discussion here
@@ -95,11 +255,37 @@ Discussion here
 
 ```{R}
 library(caret)
-# non-parametric classifier code here
+knn_fit <- knn3(chocolateIn ~ sugarpercent + pricepercent + winpercent, data=candy_rankings)
+prob_knn <- predict(knn_fit, newdata=candy_rankings)
+prob_knn
+class_diag(prob_knn[,2], candy_rankings$chocolateIn, positive=1)
+table(truth=factor(candy_rankings$chocolateIn==1, levels=c("TRUE", "FALSE")), predictions=factor(prob_knn[,2] >.5, levels=c("TRUE", "FALSE")))
+
 ```
 
 ```{R}
 # cross-validation of np classifier here
+
+k=10
+data<-candy_rankings[sample(nrow(candy_rankings)),]
+folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train<-data[folds!=i,] 
+  test<-data[folds==i,]
+  truth<-test$chocolateIn ## Truth labels for fold i
+  ## Train model on training set (all but fold i)
+  fit <- glm(chocolateIn ~ sugarpercent + pricepercent + winpercent, data=train, family="binomial")
+  ## Test model on test set (fold i) 
+  probs<-predict(fit,newdata = test,type="response")
+  ## Get diagnostics for fold i
+  diags<-rbind(diags,class_diag(probs,truth,positive=1))
+}
+summarize_all(diags,mean) #average diagnostics across all k folds
+
+
 ```
 
 Discussion
@@ -108,11 +294,30 @@ Discussion
 ### Regression/Numeric Prediction
 
 ```{R}
-# regression model code here
-```
+fit <- lm(winpercent~ chocolate+fruity, data=candy_rankings)
+yhat <- predict(fit)
+mean((candy_rankings$winpercent-yhat)^2)
+``` 
 
 ```{R}
 # cross-validation of regression model here
+
+k=5 #choose number of folds
+data<-candy_rankings[sample(nrow(candy_rankings)),] #randomly order rows
+folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F) #create folds
+diags<-NULL
+for(i in 1:k){
+  train<-data[folds!=i,]
+  test<-data[folds==i,]
+  ## Fit linear regression model to training set
+  fit<-lm(winpercent~ chocolate+fruity,data=train)
+  ## Get predictions/y-hats on test set (fold i)
+  yhat<-predict(fit,newdata=test)
+  ## Compute prediction error  (MSE) for fold i
+  diags<-mean((test$winpercent-yhat)^2) 
+}
+mean(diags) ## get average MSE across all folds (much higher error)!
+
 ```
 
 Discussion
@@ -121,10 +326,12 @@ Discussion
 
 ```{R}
 library(reticulate)
+
 ```
 
 ```{python}
 # python code here
+
 ```
 
 Discussion
