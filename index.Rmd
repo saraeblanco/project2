@@ -50,9 +50,9 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 
 ### Introduction 
 
-Throughout this project, I used the candy_rankings dataset found in the fivethirtyeight package. I found this data by exploring the reloaded R datasets and was immediately intrigued by the thought of classifying candy! Halloween is my favorite holday, so I was very excited to be able to apply this data to the concepts we've explored throughout this course. 
+Throughout this project I used the candy_rankings dataset found in the fivethirtyeight package. I found this data by exploring the preloaded R datasets and was immediately intrigued by the thought of classifying candy! Halloween is my favorite holday, so I was very excited to be able to apply this data to the concepts we've explored throughout this course. 
 
-This dataset was initially used to rank Halloween candy and contains the name (competitorname), types and features of the candy (including chocolate, fruity, caramel, peanutyalmondy, nougat, crispedricewafer, hard, bar, and pluribus), and the percentages (sugarpercent, pricepercent, winpercent)for each candy. The variables measure whether or not each candy contains features (chocolate, nougat, etc.) and also the percentile of sugar and price along with the overall "win percentage". There are 85 observations and the values of True and False for each binary variable are listed below. 
+This dataset was initially used to rank Halloween candy and contains the name (competitorname), types and features of the candy (including chocolate, fruity, caramel, peanutyalmondy, nougat, crispedricewafer, hard, bar, and pluribus), and the percentages (sugarpercent, pricepercent, winpercent) for each candy. The variables measure whether or not each candy contains features (chocolate, nougat, etc.) and also the percentile of sugar and price along with the overall "win percentage" as determined by a matchup study. There are 85 observations and the values of True and False for each binary variable are listed below. 
 
 
 ```{R}
@@ -75,26 +75,26 @@ clust_dat<-candy_rankings %>% dplyr::select(sugarpercent, pricepercent, winperce
 pam1 <- clust_dat %>% pam(k=3) 
 pam1
 
-#visualize
+#Visualize
 pamclust<-clust_dat %>% mutate(cluster=as.factor(pam1$clustering))
 pamclust %>% ggplot(aes(sugarpercent, winpercent, color=cluster)) + geom_point()
 
-#summarize clusters
+#Summarize clusters
 pamclust %>% group_by(cluster) %>% summarize_if(is.numeric,mean,na.rm=T)
 
-#final medoids
+#Final medoids
 candy_rankings%>%slice(pam1$id.med)
 
-#average silhouette width
+#Average silhouette width
 pam1$silinfo$avg.width
 plot(pam1,which=2)
 
 ```
     
-When initially performing clustering, I used three variables (sugarpercent, pricepercent, and winpercent) and a k value of 3 to perform PAM. The datapoints were then assigned to one of the three clusters and summarized to give the means for each of the three variables. I also pulled out the medoids for each cluster to show which candies were most representative in each group. PAM clustering classified this data with 0.552 accuracy represented in average silhoutette width, which can be quantified as a reasonable structure. 
+When initially performing clustering, I used three variables (sugarpercent, pricepercent, and winpercent) and a k value of 3 to perform PAM. The datapoints were then assigned to one of the three clusters and summarized to give the means for each of the three variables. I also pulled out the medoids for each cluster to show which candies were most representative in each group. PAM clustering classified this data with 0.552 accuracy represented in average silhouette width, which can be quantified as a reasonable structure. 
 
 ```{R}
-#picking number of clusters
+#Picking number of clusters
 pam_dat<-candy_rankings%>%select(sugarpercent, pricepercent, winpercent)
 sil_width<-vector()
 for(i in 2:10){  
@@ -107,17 +107,17 @@ ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1
 pam2 <- clust_dat %>% pam(k=2) 
 pam2
 
-#visualize
+#Visualize
 pamclust2<-clust_dat %>% mutate(cluster=as.factor(pam2$clustering))
 pamclust2 %>% ggplot(aes(sugarpercent, winpercent, color=cluster)) + geom_point()
 
-#summarize clusters
+#Summarize clusters
 pamclust2 %>% group_by(cluster) %>% summarize_if(is.numeric,mean,na.rm=T)
 
-#final medoids
+#Final medoids
 candy_rankings%>%slice(pam2$id.med)
 
-#average silhouette width/goodness of fit
+#Average silhouette width/goodness of fit
 pam2$silinfo$avg.width
 plot(pam2,which=2)
 
@@ -126,17 +126,17 @@ library(GGally); ggpairs(pamclust2, columns=1:4, aes(color=cluster))
 
 ```
 
-At this point, we used a plot to find the largest silhouette width, which turned out to be 2, and applied this to our data. As a note, I attempted to scale the data, but this severly altered the strength of the structure, so we opted to skip this step. This model increased the average silhoutette width to 0.590, which is still reasonable and slightly stronger! According to ggpairs, it appears that cluster 1 has a higher sugarpercent, high pricepercent, and high winpercent. Cluster 2 appears to have a low sugarpercent, lower pricepercent, and low winpercent.  
+At this point, we used a plot to find the largest silhouette width, which turned out to be 2, and applied this to our data. As a note, I attempted to scale the data, but this severely altered the strength of the structure, so I opted to skip this step. This model increased the average silhouette width to 0.590, which is still reasonable and slightly stronger! According to ggpairs, it appears that cluster 1 has a higher sugarpercent, high pricepercent, and high winpercent. Cluster 2 appears to have a low sugarpercent, lower pricepercent, and low winpercent.  
 
 ```{r}
-#categorical variable: gower
+#Incorporate categorical variable: gower
 dat1<-candy_rankings%>%mutate_if(is.logical,as.factor)%>%column_to_rownames("competitorname") %>%
   select(-fruity, -caramel, - peanutyalmondy, -nougat, -crispedricewafer, -hard, -bar, -pluribus)
 
 gower1<-daisy(dat1,metric="gower")
 
 
-#number of clusters
+#Number of clusters
 sil_width<-vector()
 for(i in 2:10){  
   pam_fit <- pam(gower1, diss = TRUE, k = i)  
@@ -157,19 +157,19 @@ dat1%>%mutate(cluster=pam3$clustering)%>%group_by(cluster)%>%
   separate(name,sep="_",into=c("variable","stat"))%>%
   pivot_wider(names_from = "variable",values_from="value")%>%arrange(stat)
 
-#most representative of their cluster
+#Medoids: most representative of their cluster
 candy_rankings %>% slice(pam3$id.med)
 
-#interpreting fit/average silhouette width/goodness of fit
+#Interpreting fit/average silhouette width
 pam3$silinfo$avg.width
 plot(pam3,which=2)
 
-#visualizing
+#Visualizing: ggpairs
 library(GGally); ggpairs(dat1, columns=1:4, aes(color=as.factor(pam3$clustering)))
 
 ```
     
-I chose to cluster based on gower dissimilarities as well and incorporated the categorical variable "chocolate" to see how the dataset performed. I used the silhoutette width of 2 and calculated gower dissimilarities to see how the dataset would cluster; chocolate and non-chocolate clusters seemed to result. The average silhouette width ended up being 0.729 which can be deemed a strong structure. The ggpairs showed that cluster 1 fell higher on the sugarpercent, high on pricepercent, and high on winpercent, whereas cluster 2 was lower on all three variables when chocolate was considered. 
+I chose to cluster based on gower dissimilarities as well and incorporated the categorical variable "chocolate" to see how the dataset performed. I used the silhouette width of 2 and calculated gower dissimilarities to see how the dataset would cluster; chocolate and non-chocolate clusters seemed to result. The average silhouette width ended up being 0.729 which can be deemed a strong structure. The ggpairs showed that cluster 1 fell higher on sugarpercent, high on pricepercent, and high on winpercent, whereas cluster 2 was lower on all three variables when chocolate was considered. 
 
 
 ### Dimensionality Reduction with PCA
@@ -182,8 +182,7 @@ candy_pca <- princomp(candy)
 names(candy_pca)
 candy_pca
 
-
-#how many PCs to keep?
+#Chossing number of PCs
 eigval <-  candy_pca$sdev^2
 varprop=round(eigval/sum(eigval), 2) 
 
@@ -204,7 +203,7 @@ fviz_pca_biplot(candy_pca, col.var="deeppink3") +
 
 ```
 
-Based on the plot of variance, I chose to keep the first two Principal Components. PC1 appears to be a general factor to assess the general goodness. All of the events within this component are positive, so a high score here means the candy is generally well liked, whereas a low score means the candy does poorer in each category. PC2 looks like it focuses on sugarpercent vs. winpercent. A higher score here means more sugar and a lower win percentage whereas a lower score may mean a higher win percentage and lower sugar percent. These two PCs account for 80% of the total variance in this dataset as seen in the plot. 
+Based on the plot of variance, I chose to keep the first two Principal Components. PC1 appears to be a general factor to assess the general goodness. All of the events within this component are positive, so a high score here means the candy is generally well liked, whereas a low score means the candy does poorer in each category. PC2 looks like it focuses on sugarpercent vs. winpercent. A higher score here means more sugar and a lower win percentage whereas a lower score may mean a higher win percentage and lower sugar percent. These two PCs account for 80% of the total variance in this dataset as seen in the plot. I chose to incorporate a biplot as a visual to show the candies included in our dataset and where they fall. You can see that names of candies like "Root Beer Barrels" and "Sour Patch Kids" which fall lower on Dimension 1 whereas the chocolate candies like "Kit Kat" and "Twix" are higher on this measure. 
 
 
 
@@ -237,22 +236,18 @@ folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F)
 
 diags<-NULL
 for(i in 1:k){
-  ## Create training and test sets
   train<-data[folds!=i,] 
   test<-data[folds==i,]
-  truth<-test$chocolateIn ## Truth labels for fold i
-  ## Train model on training set (all but fold i)
+  truth<-test$chocolateIn 
   fit <- glm(chocolateIn ~ sugarpercent + pricepercent + winpercent, data=train, family="binomial")
-  ## Test model on test set (fold i) 
   probs<-predict(fit,newdata = test,type="response")
-  ## Get diagnostics for fold i
   diags<-rbind(diags,class_diag(probs,truth, positive=1))
 }
-summarize_all(diags,mean) #average diagnostics across all k folds
+summarize_all(diags,mean)
 
 ```
 
-We started off by predicting chocolate from the three numeric variables in our dataset to give predictions for all of the values in the dataset. Next, we trained the model using logistic regression and noted predictions for every observation. This gave an in-sample performance that was rather strong, with an AUC of 0.9105. Next, I completed k-fold CV to determine the out-of-sample performance, which appeared to also be rather good! The AUC for this model is 0.92832, meaning that the model predicts new obsevations fairly well. Because the model did better in cross validation, we can conclude that the AUCs are comparable and there are no signs of overfitting. 
+We started off by predicting chocolate from the three numeric variables in our dataset to give predictions for all of the values in the dataset. Next, we trained the model using logistic regression and noted predictions for every observation. This gave an in-sample performance that was rather strong, with an AUC of 0.9105. Next, I completed k-fold CV to determine the out-of-sample performance, which appeared to also be rather good! The AUC for this model is 0.92832, meaning that the model predicts new observations fairly well. Because the model did better in cross validation, we can conclude that the AUCs are comparable and there are no signs of overfitting. 
 
 
 
@@ -269,7 +264,7 @@ table(truth=factor(candy_rankings$chocolateIn==1, levels=c("TRUE", "FALSE")), pr
 ```
 
 ```{R}
-# cross-validation of np classifier here
+# cross-validation of np classifier
 
 k=10
 data<-candy_rankings[sample(nrow(candy_rankings)),]
@@ -277,23 +272,19 @@ folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F)
 
 diags<-NULL
 for(i in 1:k){
-  ## Create training and test sets
   train<-data[folds!=i,] 
   test<-data[folds==i,]
-  truth<-test$chocolateIn ## Truth labels for fold i
-  ## Train model on training set (all but fold i)
+  truth<-test$chocolateIn 
   fit <- glm(chocolateIn ~ sugarpercent + pricepercent + winpercent, data=train, family="binomial")
-  ## Test model on test set (fold i) 
   probs<-predict(fit,newdata = test,type="response")
-  ## Get diagnostics for fold i
   diags<-rbind(diags,class_diag(probs,truth,positive=1))
 }
-summarize_all(diags,mean) #average diagnostics across all k folds
+summarize_all(diags,mean)
 
 
 ```
 
-Here we used k-nearest-neighbors on the same dataset to predict outcomes based on chocolate and the three numeric variables. The inital training model produced a rather good in-sample performance with an AUC of 0.9223. When it comes to predicting new observations with cross validation, the AUC was 0.89143, which did drop a bit and could be a sign of overfitting, but the drop was small so it is difficult to tell. The nonparametric model performed similarly to the linear model completed initially, however, the AUC after cross validation in the linear model proved to better fit the data. 
+Here we used k-nearest-neighbors on the same dataset to predict outcomes based on chocolate and the three numeric variables. The initial training model produced a rather good in-sample performance with an AUC of 0.9223. When it comes to predicting new observations with cross validation, the AUC was 0.89143, which did drop a bit and could be a sign of overfitting, but the drop was small so it is difficult to tell. The non-parametric model performed similarly to the linear model completed initially, however, the AUC after cross validation in the linear model proved to better fit the data. 
 
 
 ### Regression/Numeric Prediction
@@ -307,21 +298,18 @@ mean((candy_rankings$winpercent-yhat)^2)
 ```{R}
 # cross-validation of regression model here
 
-k=5 #choose number of folds
-data<-candy_rankings[sample(nrow(candy_rankings)),] #randomly order rows
-folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F) #create folds
+k=5 
+data<-candy_rankings[sample(nrow(candy_rankings)),]
+folds<-cut(seq(1:nrow(candy_rankings)),breaks=k,labels=F)
 diags<-NULL
 for(i in 1:k){
   train<-data[folds!=i,]
   test<-data[folds==i,]
-  ## Fit linear regression model to training set
   fit<-lm(winpercent~ chocolate+fruity,data=train)
-  ## Get predictions/y-hats on test set (fold i)
   yhat<-predict(fit,newdata=test)
-  ## Compute prediction error  (MSE) for fold i
   diags<-mean((test$winpercent-yhat)^2) 
 }
-mean(diags) ## get average MSE across all folds (much higher error)!
+mean(diags)
 
 ```
 
@@ -333,11 +321,10 @@ For this portion of the project, I predicted winpercent from chocolate and fruit
 library(reticulate)
 use_python("/usr/bin/python3", required=F)
 candyp<-candy_rankings %>% select(competitorname, winpercent) %>% group_by(competitorname) %>% arrange(desc(winpercent))
-candyp
 ```
 
 ```{python}
-# python code here
+# python code
 candyp=r.candyp
 list1 = candyp['competitorname'].tolist()
 list1
@@ -361,11 +348,11 @@ candyp %>% filter(winpercent == 84.18029) %>% distinct(competitorname)
 py$min
 candyp %>% filter(winpercent == 22.445341) %>% distinct(competitorname)
 ```
-In this section, I first pulled out winpercent and competitorname to focus on only two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py$ and then found the distinct competitor names that corresponded to these values. 
+In this section, I first pulled out winpercent and competitorname to focus only on two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py$max and py$min and then found the distinct competitor names that corresponded to these values. 
 
 ### Concluding Remarks
 
-In conclusion, this dataset was an interesting one to examine and provided some sweet results! It appears that chocolate candies were popular in this study and it looks like chocolate may have been linked to sugar, price, and win percentage. More research should be done to determine whether or not the other candy types were determinants in their percentages. 
+In conclusion, this dataset was an interesting one to examine and provided some sweet results! It appears that chocolate candies were popular in this study and it looks like chocolate may have been linked to sugar, price, and win percentage. More analysis should be done to determine whether or not the other candy features were determinants in their sugar, price, and win percentages. 
 
 
 
