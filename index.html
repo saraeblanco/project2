@@ -1907,7 +1907,7 @@ candy_rankings %&gt;% select(competitorname, chocolate, sugarpercent,
 ##  5 Air Heads          FALSE            0.906        0.511       52.3 TRUE      
 ##  6 Almond Joy         TRUE             0.465        0.767       50.3 TRUE      
 ##  7 Baby Ruth          TRUE             0.604        0.767       56.9 FALSE     
-##  8 Boston Baked Beans FALSE            0.313        0.511       23.4 TRUE      
+##  8 Boston Baked Beans FALSE            0.313        0.511       23.4 FALSE     
 ##  9 Candy Corn         FALSE            0.906        0.325       38.0 FALSE     
 ## 10 Caramel Apple Pops FALSE            0.604        0.325       34.5 FALSE     
 ## # … with 75 more rows</code></pre>
@@ -1962,8 +1962,8 @@ for (i in 1:k) {
     diags &lt;- rbind(diags, class_diag(probs, truth, positive = 1))
 }
 summarize_all(diags, mean)</code></pre>
-<pre><code>##       acc    sens spec     ppv      f1  ba     auc
-## 1 0.85001 0.86238  NaN 0.80833 0.80207 NaN 0.94278</code></pre>
+<pre><code>##       acc    sens    spec     ppv      f1      ba     auc
+## 1 0.84862 0.79167 0.87643 0.81666 0.77709 0.83404 0.89888</code></pre>
 <p>We started off by predicting chocolate from the three numeric variables in our dataset to give predictions for all of the values in the dataset. Next, we trained the model using logistic regression and noted predictions for every observation. This gave an in-sample performance that was rather strong, with an AUC of 0.9105. Next, I completed k-fold CV to determine the out-of-sample performance, which appeared to also be rather good! The AUC for this model is 0.92832, meaning that the model predicts new observations fairly well. Because the model did better in cross validation, we can conclude that the AUCs are comparable and there are no signs of overfitting.</p>
 </div>
 <div id="non-parametric-classifier" class="section level3">
@@ -2052,8 +2052,8 @@ for (i in 1:k) {
     diags &lt;- rbind(diags, class_diag(probs, truth, positive = 1))
 }
 summarize_all(diags, mean)</code></pre>
-<pre><code>##       acc    sens    spec     ppv      f1      ba     auc
-## 1 0.82362 0.77499 0.84833 0.82667 0.77162 0.81167 0.91597</code></pre>
+<pre><code>##       acc    sens    spec     ppv      f1      ba    auc
+## 1 0.84584 0.78501 0.87404 0.83001 0.79572 0.82952 0.8602</code></pre>
 <p>Here we used k-nearest-neighbors on the same dataset to predict outcomes based on chocolate and the three numeric variables. The initial training model produced a rather good in-sample performance with an AUC of 0.9223. When it comes to predicting new observations with cross validation, the AUC was 0.89143, which did drop a bit and could be a sign of overfitting, but the drop was small so it is difficult to tell. The non-parametric model performed similarly to the linear model completed initially, however, the AUC after cross validation in the linear model proved to better fit the data.</p>
 </div>
 <div id="regressionnumeric-prediction" class="section level3">
@@ -2076,7 +2076,7 @@ for (i in 1:k) {
     diags &lt;- mean((test$winpercent - yhat)^2)
 }
 mean(diags)</code></pre>
-<pre><code>## [1] 101.846</code></pre>
+<pre><code>## [1] 189.4154</code></pre>
 <p>For this portion of the project, I predicted winpercent from chocolate and fruity. This produced a MSE of 123.3221, which is rather large and indicates that there is likely a high amount of error in this model. After performing k-fold CV, the average MSE was 99.43919, which is still very large and confirms that the error in this model is high. The drop in MSE in cross validation is a good thing, but the fact that this value is so high means that there is likely overfitting.</p>
 </div>
 <div id="python" class="section level3">
@@ -2118,7 +2118,7 @@ min</code></pre>
 ##   competitorname
 ##   &lt;chr&gt;         
 ## 1 Nik L Nip</code></pre>
-<p>In this section, I first pulled out winpercent and competitorname to focus only on two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py<span class="math inline">\(max and py\)</span>min and then found the distinct competitor names that corresponded to these values.</p>
+<p>In this section, I first pulled out winpercent and competitorname to focus only on two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py$ and then found the distinct competitor names that corresponded to these values.</p>
 </div>
 <div id="concluding-remarks" class="section level3">
 <h3>Concluding Remarks</h3>

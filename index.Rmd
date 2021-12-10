@@ -348,7 +348,7 @@ candyp %>% filter(winpercent == 84.18029) %>% distinct(competitorname)
 py$min
 candyp %>% filter(winpercent == 22.445341) %>% distinct(competitorname)
 ```
-In this section, I first pulled out winpercent and competitorname to focus only on two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py$max and py$min and then found the distinct competitor names that corresponded to these values. 
+In this section, I first pulled out winpercent and competitorname to focus only on two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py$ and then found the distinct competitor names that corresponded to these values. 
 
 ### Concluding Remarks
 
