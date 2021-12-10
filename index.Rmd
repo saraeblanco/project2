@@ -49,16 +49,18 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 ## Sara Blanco, seb4296
 
 ### Introduction 
-Paragraph or two introducing your datasets and variables, why they are interesting to you, etc. See instructions for more information
 
-Introduce your dataset and each of your variables (or just your main variables if you have lots) in a paragraph. Where did you find the data? What are each of the variables measuring? How many observations are there? How many of observations are there per group for your categorical/binary variable(s)?
+Throughout this project, I used the candy_rankings dataset found in the fivethirtyeight package. I found this data by exploring the reloaded R datasets and was immediately intrigued by the thought of classifying candy! Halloween is my favorite holday, so I was very excited to be able to apply this data to the concepts we've explored throughout this course. 
 
-https://www.rdocumentation.org/packages/fivethirtyeight/versions/0.6.2/topics/candy_rankings
+This dataset was initially used to rank Halloween candy and contains the name (competitorname), types and features of the candy (including chocolate, fruity, caramel, peanutyalmondy, nougat, crispedricewafer, hard, bar, and pluribus), and the percentages (sugarpercent, pricepercent, winpercent)for each candy. The variables measure whether or not each candy contains features (chocolate, nougat, etc.) and also the percentile of sugar and price along with the overall "win percentage". There are 85 observations and the values of True and False for each binary variable are listed below. 
+
 
 ```{R}
 library(tidyverse)
 library(fivethirtyeight)
 candy_rankings
+
+candy_rankings %>% select(chocolate, fruity, caramel, peanutyalmondy, nougat, crispedricewafer, hard, bar, pluribus) %>% sapply(table)
 ```
 
 ### Cluster Analysis
@@ -87,6 +89,11 @@ candy_rankings%>%slice(pam1$id.med)
 pam1$silinfo$avg.width
 plot(pam1,which=2)
 
+```
+    
+When initially performing clustering, I used three variables (sugarpercent, pricepercent, and winpercent) and a k value of 3 to perform PAM. The datapoints were then assigned to one of the three clusters and summarized to give the means for each of the three variables. I also pulled out the medoids for each cluster to show which candies were most representative in each group. PAM clustering classified this data with 0.552 accuracy represented in average silhoutette width, which can be quantified as a reasonable structure. 
+
+```{R}
 #picking number of clusters
 pam_dat<-candy_rankings%>%select(sugarpercent, pricepercent, winpercent)
 sil_width<-vector()
@@ -95,11 +102,6 @@ for(i in 2:10){
   sil_width[i] <- pam_fit$silinfo$avg.width  
 }
 ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
-```
-
-
-```{R}
-#Redo after finding cluster number that gives best silhouette width *note, scaling was completed, but it altered strength of structure 
 
 #PAM
 pam2 <- clust_dat %>% pam(k=2) 
@@ -119,11 +121,12 @@ candy_rankings%>%slice(pam2$id.med)
 pam2$silinfo$avg.width
 plot(pam2,which=2)
 
-
 #ggpairs
 library(GGally); ggpairs(pamclust2, columns=1:4, aes(color=cluster))
 
 ```
+
+At this point, we used a plot to find the largest silhouette width, which turned out to be 2, and applied this to our data. As a note, I attempted to scale the data, but this severly altered the strength of the structure, so we opted to skip this step. This model increased the average silhoutette width to 0.590, which is still reasonable and slightly stronger! According to ggpairs, it appears that cluster 1 has a higher sugarpercent, high pricepercent, and high winpercent. Cluster 2 appears to have a low sugarpercent, lower pricepercent, and low winpercent.  
 
 ```{r}
 #categorical variable: gower
@@ -159,22 +162,21 @@ candy_rankings %>% slice(pam3$id.med)
 
 #interpreting fit/average silhouette width/goodness of fit
 pam3$silinfo$avg.width
-plot(pam2,which=2)
+plot(pam3,which=2)
 
 #visualizing
 library(GGally); ggpairs(dat1, columns=1:4, aes(color=as.factor(pam3$clustering)))
 
 ```
-
-Discussion of clustering here
-
-Include a paragraph or two describing results found, interpreting the clusters in terms of the original variables and observations, discussing goodness of fit of the cluster solution, etc.
     
-    
+I chose to cluster based on gower dissimilarities as well and incorporated the categorical variable "chocolate" to see how the dataset performed. I used the silhoutette width of 2 and calculated gower dissimilarities to see how the dataset would cluster; chocolate and non-chocolate clusters seemed to result. The average silhouette width ended up being 0.729 which can be deemed a strong structure. The ggpairs showed that cluster 1 fell higher on the sugarpercent, high on pricepercent, and high on winpercent, whereas cluster 2 was lower on all three variables when chocolate was considered. 
+
+
 ### Dimensionality Reduction with PCA
 
 ```{R}
-candy <- candy_rankings %>% select_if(is.numeric) %>% scale
+candy_p <- candy_rankings %>% select(competitorname, sugarpercent, pricepercent, winpercent)
+candy <- candy_p %>% select_if(is.numeric) %>% scale
 rownames(candy) <- candy_rankings$competitorname
 candy_pca <- princomp(candy)
 names(candy_pca)
@@ -189,7 +191,6 @@ ggplot() + geom_bar(aes(y=varprop, x=1:3), stat="identity") + xlab("") + geom_pa
   geom_text(aes(x=1:3, y=varprop, label=round(varprop, 2)), vjust=1, col="white", size=5) + 
   scale_y_continuous(breaks=seq(0, .6, .2), labels = scales::percent) + 
   scale_x_continuous(breaks=1:10)
-
 summary(candy_pca, loadings=T)
 
 
@@ -197,13 +198,15 @@ candydf<-data.frame(Name= candy_rankings$competitorname, PC1=candy_pca$scores[, 
 
 ggplot(candydf, aes(PC1, PC2)) + geom_point()
 
-
 library(factoextra)
 fviz_pca_biplot(candy_pca, col.var="deeppink3") +
    xlim(-4, 4) + ylim (-3, 3)
+
 ```
 
-Discussions of PCA here. 
+Based on the plot of variance, I chose to keep the first two Principal Components. PC1 appears to be a general factor to assess the general goodness. All of the events within this component are positive, so a high score here means the candy is generally well liked, whereas a low score means the candy does poorer in each category. PC2 looks like it focuses on sugarpercent vs. winpercent. A higher score here means more sugar and a lower win percentage whereas a lower score may mean a higher win percentage and lower sugar percent. These two PCs account for 80% of the total variance in this dataset as seen in the plot. 
+
+
 
 ###  Linear Classifier
 
@@ -225,7 +228,7 @@ candy_rankings %>% ggplot(aes(sugarpercent, chocolateIn)) + geom_point(aes(color
 ```
 
 ```{R}
-# cross-validation of linear classifier here
+# cross-validation of linear classifier 
 #K-fold CV
 
 k=10
@@ -249,7 +252,9 @@ summarize_all(diags,mean) #average diagnostics across all k folds
 
 ```
 
-Discussion here
+We started off by predicting chocolate from the three numeric variables in our dataset to give predictions for all of the values in the dataset. Next, we trained the model using logistic regression and noted predictions for every observation. This gave an in-sample performance that was rather strong, with an AUC of 0.9105. Next, I completed k-fold CV to determine the out-of-sample performance, which appeared to also be rather good! The AUC for this model is 0.92832, meaning that the model predicts new obsevations fairly well. Because the model did better in cross validation, we can conclude that the AUCs are comparable and there are no signs of overfitting. 
+
+
 
 ### Non-Parametric Classifier
 
@@ -288,7 +293,7 @@ summarize_all(diags,mean) #average diagnostics across all k folds
 
 ```
 
-Discussion
+Here we used k-nearest-neighbors on the same dataset to predict outcomes based on chocolate and the three numeric variables. The inital training model produced a rather good in-sample performance with an AUC of 0.9223. When it comes to predicting new observations with cross validation, the AUC was 0.89143, which did drop a bit and could be a sign of overfitting, but the drop was small so it is difficult to tell. The nonparametric model performed similarly to the linear model completed initially, however, the AUC after cross validation in the linear model proved to better fit the data. 
 
 
 ### Regression/Numeric Prediction
@@ -320,25 +325,47 @@ mean(diags) ## get average MSE across all folds (much higher error)!
 
 ```
 
-Discussion
+For this portion of the project, I predicted winpercent from chocolate and fruity. This produced a MSE of 123.3221, which is rather large and indicates that there is likely a high amount of error in this model. After performing k-fold CV, the average MSE was 99.43919, which is still very large and confirms that the error in this model is high. The drop in MSE in cross validation is a good thing, but the fact that this value is so high means that there is likely overfitting. 
 
 ### Python 
 
 ```{R}
 library(reticulate)
-
+use_python("/usr/bin/python3", required=F)
+candyp<-candy_rankings %>% select(competitorname, winpercent) %>% group_by(competitorname) %>% arrange(desc(winpercent))
+candyp
 ```
 
 ```{python}
 # python code here
-
+candyp=r.candyp
+list1 = candyp['competitorname'].tolist()
+list1
+list2 = candyp['winpercent'].tolist()
+list2
+list3= [list1,list2]
+list3
 ```
 
-Discussion
+
+```{python}
+max = list3[1][0] 
+max
+min = list3[1][84]
+min
+```
+
+```{r}
+py$max
+candyp %>% filter(winpercent == 84.18029) %>% distinct(competitorname)
+py$min
+candyp %>% filter(winpercent == 22.445341) %>% distinct(competitorname)
+```
+In this section, I first pulled out winpercent and competitorname to focus on only two variables from our dataset. I then transferred this data to python using r.candyp and transformed this data into lists so that I could then index the max and min based on their position. Then, in R, I called the max and min found in python by using py$ and then found the distinct competitor names that corresponded to these values. 
 
 ### Concluding Remarks
 
-Include concluding remarks here, if any
+In conclusion, this dataset was an interesting one to examine and provided some sweet results! It appears that chocolate candies were popular in this study and it looks like chocolate may have been linked to sugar, price, and win percentage. More research should be done to determine whether or not the other candy types were determinants in their percentages. 
 
 
 
